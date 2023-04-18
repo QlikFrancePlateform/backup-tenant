@@ -1,0 +1,398 @@
+///$tab Main
+SET ThousandSep=',';
+SET DecimalSep='.';
+SET MoneyThousandSep=',';
+SET MoneyDecimalSep='.';
+SET MoneyFormat='$#,##0.00;-$#,##0.00';
+SET TimeFormat='h:mm:ss TT';
+SET DateFormat='M/D/YYYY';
+SET TimestampFormat='M/D/YYYY h:mm:ss[.fff] TT';
+SET FirstWeekDay=6;
+SET BrokenWeeks=1;
+SET ReferenceDay=0;
+SET FirstMonthOfYear=1;
+SET CollationLocale='en-US';
+SET CreateSearchIndexOnReload=1;
+SET MonthNames='Jan;Feb;Mar;Apr;May;Jun;Jul;Aug;Sep;Oct;Nov;Dec';
+SET LongMonthNames='January;February;March;April;May;June;July;August;September;October;November;December';
+SET DayNames='Mon;Tue;Wed;Thu;Fri;Sat;Sun';
+SET LongDayNames='Monday;Tuesday;Wednesday;Thursday;Friday;Saturday;Sunday';
+SET NumericalAbbreviation='3:k;6:M;9:B;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+///$tab Calendar
+LET v_Today = MonthStart(Today());
+LET v_Max = MakeDate(2013,1);
+
+LET v_Diff = (Year(v_Today) * 12 + Month(v_Today)) - (Year(v_Max) * 12 + Month(v_Max));
+
+Calendar:
+LOAD
+    AddMonths(MonthYear, $(v_Diff)) AS MonthYear,
+    OrderDates,
+    Year(AddMonths(MonthYear, $(v_Diff))) AS Year,
+    'Past' AS [Cal Type]
+;
+LOAD
+	OrderDates,
+	If(MonthYear = MakeDate(2012, 6), MakeDate(2012, 12),
+    If(MonthYear = MakeDate(2012, 12), MakeDate(2012, 6),
+    If(MonthYear = MakeDate(2012, 5), MakeDate(2012, 11),
+    If(MonthYear = MakeDate(2012, 11), MakeDate(2012, 5),
+    MonthYear
+    )))) AS MonthYear
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is Calendar$)
+WHERE MonthYear < MakeDate(2013,1);
+
+
+
+///$tab Sales Analysis Data.xls
+BillToAddress:
+LOAD
+    AddressLine1,
+    AddressLine2,
+    BillToAddressID,
+    City,
+    Country,
+    Upper(Country)				as [SECURITY COUNTRY],
+    CountryRegionCode,
+    PostalCode,
+    PostCode,
+    SECURITY,
+    "State / Province",
+    StateProvinceID
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is BillToAddress$);
+
+
+Customer:
+LOAD
+    Channel,
+    CustomerID,
+    Customer,
+    CustomerName,
+    EmailAddress,
+    EmailPromotion,
+    Phone,
+    Title
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is Customer$);
+
+
+
+
+OrderHeader:
+LOAD
+    AccountNumber,
+    BillToAddressID,
+    "Comment",
+    ContactID,
+    CreditCardApprovalCode,
+    CreditCardID,
+    CurrencyRateID,
+    CustomerID,
+    DueDateOriginal,
+    DueDates,
+    Freight,
+    OnlineOrderFlag,
+    OrderDates,
+    PurchaseOrderNumber,
+    RevisionNumber,
+    SalesOrderID,
+    SalesOrderNumber,
+    SalesPersonID,
+    ShipDateOriginal,
+    ShipDates,
+    ShipMethodID,
+    ShipToAddressID,
+    Status,
+    SubTotal,
+    TaxAmt,
+    TerritoryID,
+    TotalDue
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is OrderHeader$)
+WHERE exists(OrderDates);
+
+Product:
+LOAD
+    "Class",
+    "Color",
+    DaysToManufacture,
+    DiscontinuedDate,
+    FinishedGoodsFlag,
+    ListPrice,
+    MakeFlag,
+    Product,
+    ProductID,
+    ProductLine,
+    ProductModelID,
+    ProductName,
+    ProductNumber,
+    ReorderPoint,
+    SafetyStockLevel,
+    SellEndDate,
+    SellStartDate,
+    Size,
+    SizeUnitMeasureCode,
+    StandardCost,
+    Style,
+    Weight,
+    WeightUnitMeasureCode,
+    ProductSubcategoryName,
+    ProductCategoryName
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is Product$);
+
+SalesPerson:
+LOAD
+    SalesPersonID,
+    SalesPersonName
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is SalesPerson$);
+
+
+///$tab Order Details
+OrderDetail:
+LOAD
+    SalesOrderDetailID,
+    CarrierTrackingNumber,
+    CostAmount,
+    MarginAmount,
+    OrderQty,
+    ProductID,
+    SalesAmount,
+    SalesOrderID,
+    SpecialOfferID,
+    UnitPrice,
+    UnitPriceDiscount,
+    UnitPriceDiscountInput
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is [OrderDetail 2010$])
+WHERE exists(SalesOrderID);
+
+LOAD
+    SalesOrderDetailID,
+    CarrierTrackingNumber,
+    CostAmount,
+    MarginAmount,
+    OrderQty,
+    ProductID,
+    SalesAmount,
+    SalesOrderID,
+    SpecialOfferID,
+    UnitPrice,
+    UnitPriceDiscount,
+    UnitPriceDiscountInput
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is [OrderDetail 2011$])
+WHERE exists(SalesOrderID);
+
+LOAD
+    SalesOrderDetailID,
+    CarrierTrackingNumber,
+    CostAmount,
+    MarginAmount,
+    OrderQty,
+    ProductID,
+    SalesAmount,
+    SalesOrderID,
+    SpecialOfferID,
+    UnitPrice,
+    UnitPriceDiscount,
+    UnitPriceDiscountInput
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is [OrderDetail 2012-1$])
+WHERE exists(SalesOrderID);
+
+LOAD
+    SalesOrderDetailID,
+    CarrierTrackingNumber,
+    CostAmount,
+    MarginAmount,
+    OrderQty,
+    ProductID,
+    SalesAmount,
+    SalesOrderID,
+    SpecialOfferID,
+    UnitPrice,
+    UnitPriceDiscount,
+    UnitPriceDiscountInput
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is [OrderDetail 2012-2$])
+WHERE exists(SalesOrderID);
+
+///$tab GeoData
+MapData:
+LOAD
+    "Customer Location",
+    CustomerID
+FROM [lib://Data/Sales Data/Sales Analysis Map Data.qvd]
+(qvd);
+
+
+///$tab Future Cal
+Calendar:
+LOAD
+    AddMonths(MonthYear, $(v_Diff)) AS MonthYear,
+    OrderDates,
+    Year(AddMonths(MonthYear, $(v_Diff))) AS Year,
+    'Future' AS [Cal Type]
+FROM [lib://Data/Sales Data/Sales Analysis Data.xls]
+(biff, embedded labels, table is Calendar$)
+WHERE MonthYear >= MakeDate(2013,1);
+///$tab Section générée automatiquement
+///$autogenerated
+Set dataManagerTables = '','Trad';
+//This block renames script tables from non generated section which conflict with the names of managed tables
+
+For each name in $(dataManagerTables) 
+    Let index = 0;
+    Let currentName = name; 
+    Let tableNumber = TableNumber(name); 
+    Let matches = 0; 
+    Do while not IsNull(tableNumber) or (index > 0 and matches > 0)
+        index = index + 1; 
+        currentName = name & '-' & index; 
+        tableNumber = TableNumber(currentName) 
+        matches = Match('$(currentName)', $(dataManagerTables));
+    Loop 
+    If index > 0 then 
+            Rename Table '$(name)' to '$(currentName)'; 
+    EndIf; 
+Next; 
+Set dataManagerTables = ;
+
+
+Unqualify *;
+
+[Trad]:
+LOAD * INLINE 
+[
+Id,FR,EN
+mi.dim.address,Adresse,Address
+mi.dim.address_desc,Adresse du client,Address of the customer
+mi.dim.category,Catégorie,Category
+mi.dim.category_desc,Catégorie produit (niveau 1 de la hiérarchie),Product category (level 1)
+mi.dim.channel,Canal,Channel
+mi.dim.channel_desc,Canal de vente du produit,Channel through which the product was sold
+mi.dim.city,Ville,City
+mi.dim.city_country,Ville & Pays,City & Country
+mi.dim.city_country_desc,Hiérarchie Pays > Ville de résidence ou de livraison du client,Hierarchy Country > City of delivery or residenship
+mi.dim.city_desc,Ville de résidence ou de livraison du client,City of delivery or residenship
+mi.dim.country,Pays,Country
+mi.dim.country_desc,Pays de résidence ou de livraison du client,Coutry of delivery or residenship
+mi.dim.customer,Client,Customer
+mi.dim.customer_desc,Client qui a effectué l'acte d'achat,Customer who bought the product
+mi.dim.monthyear,Année - Mois,Month Year
+mi.dim.monthyear_desc,Année - Mois de vente du produit,Year - Month when the product was sold
+mi.dim.product,Produit,Product
+mi.dim.product_desc,Produit vendu,Product that was sold
+mi.dim.sales_person,Vendeur,Sales Person
+mi.dim.sales_person_desc,Vendeur,Sales representative
+mi.dim.sub_category,Sous-Catégorie,Sub-Category
+mi.dim.sub_category_desc,Sous catégorie produit (niveau 2 de la hiérarchie),Product sub category
+mi.dim.year,Année,Year
+mi.dim.year_desc,Année de vente du produit,Year when the product was sold
+mi.mea.aai.margin,Marge,Margin
+mi.mea.aai.margin_desc,Montant de la marge passée à utiliser pour le prédictif,Past margin amount for predictive analytics use
+mi.mea.aai.margin_forecast,Marge (Future),Margin Forecast
+mi.mea.aai.margin_forecast_desc,Montant de la marge future à utiliser pour le prédictif,Future margin amount for predictive analytics use
+mi.mea.aai.margin_forecast_low_80_pct,Marge (Future 80% Bas),Margin Forecast Low 80%
+mi.mea.aai.margin_forecast_low_80_pct_desc,Montant de la marge future (pessimiste) à utiliser pour le prédictif,Future margin amount (pessimistic) for predictive analytics use
+mi.mea.aai.margin_forecast_up_80_pct,Marge (Future 80% Haut),Margin Forecast Up 80%
+mi.mea.aai.margin_forecast_up_80_pct_desc,Montant de la marge future (optimiste) à utiliser pour le prédictif,Future margin amount (optimistic) for predictive analytics use
+mi.mea.aai.sales,Ventes,Sales
+mi.mea.aai.sales_desc,Montant des ventes passées à utiliser pour le prédictif,Past sales amount for predictive analytics use
+mi.mea.aai.sales_forecast,Ventes (Future),Sales Forecast
+mi.mea.aai.sales_forecast_desc,Montant des ventes futures à utiliser pour le prédictif,Future sales amount for predictive analytics use
+mi.mea.aai.sales_forecast_low_80_pct,Ventes (Future 80% Bas),Sales Forecast Low 80%
+mi.mea.aai.sales_forecast_low_80_pct_desc,Montant des ventes futures (pessimiste) à utiliser pour le prédictif,Future sales amount (pessimistic) for predictive analytics use
+mi.mea.aai.sales_forecast_up_80_pct,Ventes (Future 80% Haut),Sales Forecast Up 80%
+mi.mea.aai.sales_forecast_up_80_pct_desc,Montant des ventes futures (optimiste) à utiliser pour le prédictif,Future sales amount (optimistic) for predictive analytics use
+mi.mea.aai.spend,Dépense,Spend
+mi.mea.aai.spend_desc,Montant des dépenses passées à utiliser pour le prédictif,Past spend amount for predictive analytics use
+mi.mea.aai.spend_forecast,Dépense (Future),Spend Forecast
+mi.mea.aai.spend_forecast_desc,Montant des dépenses futures à utiliser pour le prédictif,Future spend amount for predictive analytics use
+mi.mea.aai.spend_forecast_low_80_pct,Dépense (Future 80% Bas),Spend Forecast Low 80%
+mi.mea.aai.spend_forecast_low_80_pct_desc,Montant des dépenses futures (optimiste) à utiliser pour le prédictif,Future spend amount (optimistic) for predictive analytics use
+mi.mea.aai.spend_forecast_up_80_pct,Dépense (Future 80% Haut),Spend Forecast Up 80%
+mi.mea.aai.spend_forecast_up_80_pct_desc,Montant des dépenses futures (pssimiste) à utiliser pour le prédictif,Future spend amount (pessimistic) for predictive analytics use
+mi.mea.last_month_name,Mois Courant,Last Month Name
+mi.mea.last_month_name_desc,Mois en cours,Current Month
+mi.mea.margin_amnt,Marge €,Margin €
+mi.mea.margin_amnt_current,Marge € Mois Courant,Margin € Current Month
+mi.mea.margin_amnt_current_desc,Somme du montant de la marge sur l'ensemble du mois courant et des sélections courantes,Sum of margin amount on current month and current selections
+mi.mea.margin_amnt_desc,Somme du montant de la marge sur l'ensemble des sélections courantes,Sum of margin amount on current selections
+mi.mea.margin_amnt_evol,Evol Marge €,Evol Margin €
+mi.mea.margin_amnt_evol_desc,Evolution du montant de la marge entre le mois précédent et le mois courant,Evolution of margin amount between previous and current month
+mi.mea.margin_amnt_previous,Marge € Mois Précédent,Margin € Previous Month
+mi.mea.margin_amnt_previous_desc,Somme du montant de la marge sur l'ensemble du mois précédent et des sélections courantes,Sum of margin amount on previous month and current selections
+mi.mea.margin_pct,Marge %,Margin %
+mi.mea.margin_pct_current,Marge % Mois Courant,Margin % Current Month
+mi.mea.margin_pct_current_desc,Pourcentage de marge relativement aux ventes sur l'ensemble du mois courant et des sélections courantes,Percentage of margin relative to sales on current month and current selections
+mi.mea.margin_pct_desc,Pourcentage de marge relativement aux ventes sur l'ensemble des sélections courantes,Percentage of margin relative to sales on current selections
+mi.mea.margin_pct_evol,Evol Marge %,Evol Margin %
+mi.mea.margin_pct_evol_desc,Evolution du pourcentage de marge relativement aux ventes entre le mois précédent et le mois courant,Evolution of the percentage of margin relative to sales between previous and current month
+mi.mea.margin_pct_previous,Marge % Mois Précédent,Margin % Previous Month
+mi.mea.margin_pct_previous_desc,Pourcentage de marge relativement aux ventes sur l'ensemble du mois précédent et des sélections courantes,Percentage of margin relative to sales on previous month and current selections
+mi.mea.orders,Commandes,Orders
+mi.mea.orders_current,Commandes Mois Courant,Orders Current Month
+mi.mea.orders_current_desc,Nombre de commandes sur l'ensemble du mois courant et des sélections courantes,Number of orders on current month and current selections
+mi.mea.orders_desc,Nombre de commandes sur l'ensemble des sélections courantes,Number of orders on current selections
+mi.mea.orders_evol,Evol Commandes,Evol Orders
+mi.mea.orders_evol_desc,Evolution du nombre de commandes entre le mois précédent et le mois courant,Evolution of the number of orders between previous and current month
+mi.mea.orders_previous,Commandes Mois Précédent,Orders Previous Month
+mi.mea.orders_previous_desc,Nombre de commandes sur l'ensemble du mois précédent et des sélections courantes,Number of orders on previous month and current selections
+mi.mea.orders_quantity,Quantités,Orders Quantity
+mi.mea.orders_quantity_current,Quantités Mois Courant,Orders Quantity Current Month
+mi.mea.orders_quantity_current_desc,Quantité de produits commandés sur l'ensemble du mois courant et des sélections courantes,Quantity of ordered products on current month and current selections
+mi.mea.orders_quantity_desc,Quantité de produits commandés sur l'ensemble des sélections courantes,Quantity of ordered products on current selections
+mi.mea.orders_quantity_evol,Evol Quantités,Evol Orders Quantity
+mi.mea.orders_quantity_evol_desc,Evolution de la quantité de produits commandés entre le mois précédent et le mois courant,Evolution of the quantity of ordered products between previous and current month
+mi.mea.orders_quantity_previous,Quantités Mois Précédent,Orders Quantity Previous Month
+mi.mea.orders_quantity_previous_desc,Quantité de produits commandés sur l'ensemble du mois précédent et des sélections courantes,Quantity of ordered products on previous month and current selections
+mi.mea.sales,Ventes,Sales
+mi.mea.sales_current,Ventes Mois Courant,Sales Current Month
+mi.mea.sales_current_desc,Somme du montant des ventes sur l'ensemble du mois courant et des sélections courantes,Sum of sales amount on current month and current selections
+mi.mea.sales_desc,Somme du montant des ventes sur l'ensemble des sélections courantes,Sum of sales amount on current selections
+mi.mea.sales_evol,Evol Ventes,Evol Sales
+mi.mea.sales_evol_desc,Evolution du montant des ventes entre le mois précédent et le mois courant,Evolution of sales amount between previous and current month
+mi.mea.sales_previous,Ventes Mois Précédent,Sales Previous Month
+mi.mea.sales_previous_desc,Somme du montant des ventes sur l'ensemble du mois précédent et des sélections courantes,Sum of sales amount on previous month and current selections
+mi.mea.spend,Dépenses,Spend
+mi.mea.spend_current,Dépenses Mois Courant,Spend Current
+mi.mea.spend_current_desc,Somme du montant des dépenses sur l'ensemble du mois courant et des sélections courantes,Sum of spend amount on current month and current selections
+mi.mea.spend_desc,Somme du montant des dépenses sur l'ensemble des sélections courantes,Sum of spend amount on current selections
+mi.mea.spend_evol,Evol Dépenses,Evol Spend
+mi.mea.spend_evol_desc,Evolution du montant des dépenses entre le mois précédent et le mois courant,Evolution of spend amount between previous and current month
+mi.mea.spend_previous,Dépenses Mois Précédent,Spend Previous
+mi.mea.spend_previous_desc,Somme du montant des dépenses sur l'ensemble du mois précédent et des sélections courantes,Sum of spend amount on previous month and current selections
+obj.analysis.kpis_by_category,KPIs par Catégorie,KPIs by Category
+obj.analysis.margin_pct_by_sub_category,Ventes par Sous-Catégorie,Sales By Sub-Category
+obj.analysis.sales_and_margin_pct_by_category,Ventes et Marge % par Catégorie,Sales and Margin % by Category
+obj.analysis.sales_by_country_and_city,Ventes par Géographie,Sales by Country and City
+obj.analysis.sales_forecast,Forecast des Ventes,Sales Forecast
+obj.dashboard.sales_by_channel,Ventes/Marge par Catégorie,Sales/Margin by Product Categories
+obj.dashboard.sales_by_channel_desc,Coloré par Evol Marge %,Colored by Evol Margin %
+obj.dashboard.sales_by_country_and_city,Ventes par Géographie,Sales by Country and City
+obj.dashboard.sales_by_product_categories,Commandes par Catégorie,Orders by Product Categories
+obj.dashboard.sales_by_product_categories_desc,Coloré par Evol Commandes %,Colored by Evol Orders %
+obj.dashboard.spend_by_product_categories,Dépenses par Catégorie,Spend by Product Categories
+obj.last_month,Mois en cours :,Current Month :
+obj.margin_analysis.margin_forecast,Forecast de la Marge,Margin Forecast
+obj.margin_analysis.margin_pct_by_sub_category,Marge % par Sous-Catégorie,Margin % By Sub-Category
+obj.margin_analysis.sales_and_margin_pct_by_category,Ventes et Marge % par Catégorie,Sales and Margin % by Category
+obj.spend_analysis.margin_pct_by_sub_category,Dépense par Sous-Catégorie,Spend By Sub-Category
+obj.spend_analysis.sales_and_margin_pct_by_category,Dépense et Marge % par Catégorie,Spend and Margin % by Category
+obj.spend_analysis.spend_by_category,Dépenses par Catégorie,Spend by Categorie
+obj.spend_analysis.spend_forecast,Forecast des Dépenses,Spend Forecast
+sheet.associative_data_indexing,Associativité,Associative Data Indexing
+sheet.details,Détail,Details
+sheet.margin_analysis,Analyse de la Marge,Margin Analysis
+sheet.sales_analysis,Analyse des Ventes,Sales Analysis
+sheet.sales_dashboard,Tableau de Bord,Company Dashboard
+sheet.spend_analysis,Analyse des Dépenses,Spend Analysis
+](delimiter is ',');
+
+
+
