@@ -1,0 +1,289 @@
+///$tab Main
+SET ThousandSep=' ';
+SET DecimalSep='.';
+SET MoneyThousandSep=' ';
+SET MoneyDecimalSep=',';
+SET MoneyFormat='# ##0,00 €;-# ##0,00 €';
+SET TimeFormat='hh:mm:ss';
+SET DateFormat='DD/MM/YYYY';
+SET TimestampFormat='DD/MM/YYYY hh:mm:ss[.fff]';
+SET MonthNames='janv;févr;mars;avr;mai;juin;juil;août;sept;oct;nov;déc';
+SET DayNames='lun.;mar.;mer.;jeu.;ven.;sam.;dim.';
+SET LongMonthNames='janvier;février;mars;avril;mai;juin;juillet;août;septembre;octobre;novembre;décembre';
+SET LongDayNames='lundi;mardi;mercredi;jeudi;vendredi;samedi;dimanche';
+SET FirstWeekDay=0;
+SET BrokenWeeks=0;
+SET ReferenceDay=4;
+SET FirstMonthOfYear=1;
+SET CollationLocale='fr-FR';
+SET hideprefix = '_';
+
+
+// section access;
+// LOAD
+//     "ACCESS",
+//     "USERID",
+//     REGION_SECURE,
+//     OMIT
+// FROM [lib://data (qtsel_xle)/Point de Ventes\Securite.xlsx]
+// (ooxml, embedded labels, table is Sheet1);
+
+// // load * inline [
+// // ACCESS, USERID, REGION_SECURE
+// // ADMIN, QTSEL\xle, ALL
+// // USER, FRPAR-XLE\yann, BRETAGNE
+// // USER, FRPAR-XLE\mathilde, BRETAGNE
+// // USER, INTERNAL\SA_SCHEDULER,*
+// // ];
+// section application;
+
+Search Exclude REGION_SECURE, region.Area, Quantité,COGS,CA_HT,CA, Marge,Discount,Article, photo, coordonnees,Client, AnneeMois;
+Search Exclude Client_id, Chemin, GPS_Concurent, Dataset_TravelArea, Key_Livraison, ArticleEAN, Period_Month, Magasin_Concurent;
+Search Exclude product_name, ArticleEAN, Entrepot, Commune, Nationalite;
+Search Exclude [Date ForeCast], Period_MonthName, Period_MonthName_Short, Period_DayNameMonth, Period_DayNameMonthYear;
+
+///$tab Traduction
+Traduction:
+LOAD
+    Titre,
+    "Titre-en",
+    "Titre-fr"
+FROM [lib://data (qtsel_xle)/Point de Ventes\traduction.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+
+// Creation des Variables
+let l_Label_Code_idx=1;
+Do while len(fieldvalue('Titre',l_Label_Code_idx))        
+    let l_Label_Code=fieldvalue('Titre',l_Label_Code_idx);
+	let [$(l_Label_Code)] = 'Only({1<Titre = {'&chr(39)& l_Label_Code&chr(39)&'}>} [Titre-'&chr(36)&'(vLangue)])'; 
+    
+    
+    let l_Label_Code_idx=l_Label_Code_idx+1; 
+LOOP
+
+
+
+///$tab LOAD
+[ForeCast]:
+LOAD [AnneeMois],
+	[Date ForeCast],
+    [AnneeMoisNumber]
+ FROM [lib://data (qtsel_xle)/PDV\forecast.xlsx]
+(ooxml, embedded labels, table is Sheet1);
+
+[Client]:
+LOAD 
+	[Nationalite],
+	[First Name],
+	[Gender],
+	[Client_id]
+ FROM [lib://data (qtsel_xle)/PDV\Client.QVD]
+(qvd);
+
+[Concurrence]:
+LOAD [Magasin_Concurent],
+	[GPS_Concurent],
+	[Région]
+ FROM [lib://data (qtsel_xle)/PDV\Concurrence.QVD]
+(qvd);
+
+[Details_Commune]:
+LOAD [COMMUNE_Area],
+	[code_Commune],
+	[Commune],
+	[population]
+ FROM [lib://data (qtsel_xle)/PDV\Details_Commune.QVD]
+(qvd);
+
+[distance_mag]:
+LOAD [Site],
+	[mag_ville_Distance],
+	[distance],
+	[code_Commune]
+ FROM [lib://data (qtsel_xle)/PDV\distance_mag.QVD]
+(qvd);
+
+[MAG]:
+LOAD [numMagasin],
+	[Site],
+	[ville],
+	[Région],
+	[coordonnees],
+	[Type],
+	[Statut],
+	[Ouverture],
+	[REGION_SECURE]
+ FROM [lib://data (qtsel_xle)/PDV\MAG.QVD]
+(qvd);
+
+[REGION]:
+LOAD [Région],
+	[region.Area],
+	[numDep]
+ FROM [lib://data (qtsel_xle)/PDV\REGION.QVD]
+(qvd);
+
+[SupplyChain]:
+LOAD [Supply.Rayon],
+	[Entrepot],
+	[DATE_Livraison],
+    Year([DATE_Livraison])*10000 + Month([DATE_Livraison])* 100 + Day([DATE_Livraison]) as key_Date,
+    //Year(Date#([DATE_Livraison], 'YYYYMMDD'))*10000 + Month(Date#([DATE_Livraison], 'YYYYMMDD'))* 100 + Day(Date#([DATE_Livraison], 'YYYYMMDD')) as key_Date,
+    //Date(Date#([DATE_Livraison], 'YYYYMMDD') ) AS [DATE_Livraison],
+    
+	[Centrale],
+	[GPS_Entrepot],
+	[Codepos],
+	[CP_Usine],
+	[Chemin],
+	[Usine],
+	[CP_Entrepot],
+	[Volumetrie],
+	[Annee Construction],
+	[Key_Livraison]
+ FROM [lib://data (qtsel_xle)/PDV\SupplyChain.QVD]
+(qvd);
+
+[TravelAreas]:
+LOAD [Dataset_TravelArea],
+	[Dataset_Cost],
+	[numMagasin],
+	[Transport]
+ FROM [lib://data (qtsel_xle)/PDV\TravelAreas.QVD]
+(qvd);
+
+[Trimestre]:
+LOAD [Mois],
+	[Trimestre]
+ FROM [lib://data (qtsel_xle)/PDV\Trimestre.QVD]
+(qvd);
+
+[Vente]:
+LOAD [ArticleEAN],
+	[photo],
+	[numMagasin],
+	[NMois],
+	[Marque],
+	[product_name],
+	[Categorie],
+	[Mois],
+	[Discount],
+	[Marge],
+	[Année],
+	[CA_HT],
+	[COGS],
+	[Client_id],
+	[SousCategorie],
+	[Quantité],
+	[Rayon],
+	[AnneeMois],
+	[Rayon_en],
+	[Rayon_fr],
+	[Key_Livraison]
+ FROM [lib://data (qtsel_xle)/PDV\Vente.QVD]
+(qvd);
+
+///$tab Calendrier
+// LET vDateMin = Floor(YearStart(AddYears(today(),-2)));  
+// LET vDateMax = Floor(YearEnd(AddYears(today(),0))); 
+
+
+Temp:  
+Load  
+     min([DATE_Livraison]) as minDate,  
+     max([DATE_Livraison]) as maxDate  
+Resident SupplyChain;  
+
+Let vDateMin = Num(Peek('minDate', 0, 'Temp'));  
+Let vDateMax = Num(Peek('maxDate', 0, 'Temp'));  
+DROP Table Temp;  
+
+TempCalendar:  
+LOAD 
+       Date($(vDateMin) + RowNo() - 1) AS TempDate
+AUTOGENERATE 1
+WHILE $(vDateMin)+IterNo()-1<= $(vDateMax);  
+
+
+  
+
+DimPeriod:
+NOCONCATENATE LOAD
+       Year(TempDate)*10000 + Month(TempDate)* 100 + Day(TempDate) as key_Date, // YYYYMMDD
+       Year(TempDate)                                                                                as Period_Year,
+       'Q'&Ceil(Month(TempDate)/3)                                                     as Period_Quarter,
+       'Q'&Ceil(Month(TempDate)/3) &'-'& Year(TempDate)                  as Period_QuarterName,
+       Monthname(TempDate)                                                                    as Period_MonthName,
+       Date(Monthname(TempDate),'MMM YY')                                       as Period_MonthName_Short,   
+       Month(TempDate)                                                                        as Period_Month,
+       Day(TempDate)                                                                                 as Period_DayOfMonth,
+       text(Date(TempDate, 'W'))                                                       as Period_DayOfWeek,
+       if(WeekDay(TempDate)<5,1,0)                                                     as Period_CountWeekDays,     
+       text(Date(TempDate, 'WWW'))                                                     as Period_DayNameOfWeek,
+       'W'&Week(TempDate)                                                                     as Period_Week,
+       Replace(WeekName(TempDate), '/', '-W')                                   as Period_WeekName,
+       TempDate                                                                                      as Period_Date,
+       WeekDay(TempDate)                                                                      as Period_DayName,
+       Date#(Date(TempDate, 'D MMM'), 'D MMM')                                  as Period_DayMonth,
+       Date#(Date(TempDate, 'WWW D MMM'), 'WWW D MMM')                   as Period_DayNameMonth,
+       Date#(Date(TempDate, 'WWW D MMM YYYY'), 'WWW D MMM YYYY') as Period_DayNameMonthYear
+RESIDENT TempCalendar ORDER BY TempDate ASC;
+
+/* Month at Month level */
+CONCATENATE (DimPeriod)LOAD distinct
+       Year(TempDate)*100 + Month(TempDate)                      as key_Date,  // YYYYMM
+       Year(TempDate)                                                                   as Period_Year,
+       'Q'&Ceil(Month(TempDate)/3)                                        as Period_Quarter,
+       'Q'&Ceil(Month(TempDate)/3) &'-'& Year(TempDate)     as Period_QuarterName,
+       Monthname(TempDate)                                                       as Period_MonthName,
+       Date(Monthname(TempDate),'MMM YY')                          as Period_MonthName_Short,
+       Month(TempDate)                                                           as Period_Month
+RESIDENT TempCalendar ORDER BY TempDate ASC;
+
+
+drop table TempCalendar;
+///$tab Fin
+// exit script;
+///$tab Section  Access
+// section access;
+// LOAD
+//     "ACCESS",
+//     "USERID",
+//     REGION_SECURE,
+//     OMIT
+// FROM [lib://data (qtsel_xle)/Point de Ventes\Securite.xlsx]
+// (ooxml, embedded labels, table is Sheet1);
+
+// // load * inline [
+// // ACCESS, USERID, REGION_SECURE
+// // ADMIN, QTSEL\xle, ALL
+// // USER, FRPAR-XLE\yann, BRETAGNE
+// // USER, FRPAR-XLE\mathilde, BRETAGNE
+// // USER, INTERNAL\SA_SCHEDULER,*
+// // ];
+// section application;
+
+// Search Exclude region.Area, Quantité,COGS,CA_HT,CA, Marge,Discount,Article, photo, coordonnees,Client, AnneeMois,Key_Livraison,ArticleEAN ;
+
+
+///$tab Store
+// // FOR i = 0 to NoOfTables() - 1
+//        LET tableName = TableName(i);
+     
+//        	Trace Création de $(tableName).QVD;
+//        	STORE '$(tableName)' INTO  [lib://data (qtsel_xle)/PDV/$(tableName).QVD] (qvd);
+
+// NEXT
+
+
+// // let numTables = NoOfTables();
+// // for i=1 to $(numTables)
+// //  let table = TableName(0);
+// //  drop table [$(table)];
+// // next
+///$tab Section générée automatiquement
+///$autogenerated
+
+
+
