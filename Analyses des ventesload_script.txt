@@ -1,0 +1,306 @@
+///$tab Main
+SET ThousandSep=',';
+SET DecimalSep='.';
+SET MoneyThousandSep=',';
+SET MoneyDecimalSep='.';
+SET MoneyFormat='$ ###0.00;-$ ###0.00';
+SET TimeFormat='h:mm:ss TT';
+SET DateFormat='M/D/YYYY';
+SET TimestampFormat='M/D/YYYY h:mm:ss[.fff] TT';
+SET FirstWeekDay=6;
+SET BrokenWeeks=1;
+SET ReferenceDay=0;
+SET FirstMonthOfYear=1;
+SET CollationLocale='en-US';
+SET CreateSearchIndexOnReload=1;
+SET MonthNames='Jan;Feb;Mar;Apr;May;Jun;Jul;Aug;Sep;Oct;Nov;Dec';
+SET LongMonthNames='January;February;March;April;May;June;July;August;September;October;November;December';
+SET DayNames='Mon;Tue;Wed;Thu;Fri;Sat;Sun';
+SET LongDayNames='Monday;Tuesday;Wednesday;Thursday;Friday;Saturday;Sunday';
+SET NumericalAbbreviation='3:k;6:M;9:G;12:T;15:P;18:E;21:Z;24:Y;-3:m;-6:μ;-9:n;-12:p;-15:f;-18:a;-21:z;-24:y';
+//SET v_Folder_Data='lib://AllData (qfp_vincent)/Ventes/sources-xav';
+SET v_Folder_Data='lib://DataFiles';
+///$tab Langues
+[Traduction]:
+LOAD
+    Titre,
+    "Titre-en",
+    "Titre-fr"
+FROM [lib://DataFiles/Vente-new-Traduction.qvd]
+(qvd);
+
+[Traduction-complement]:
+Load * Inline [
+	Titre, Titre-en, Titre-fr
+    Nb-Routes, # Roads, Nombres de routes
+    Nb-Transaction, # Transaction, Nombres de transactions
+    Nb-Panier, Average basket in €, Panier moyen en €
+    Rayons, Category, Rayons
+    Titre-Sankey, Turnover by type of store and regions, CA par type de magasin et régions
+    Titre-Quantite-Marge, Quantity and Margin by stores, Quantité et Marge par magasins
+    Duree-Title, Duration, Durée
+    Distance, Distance in km, Distance en km
+    Nouveau, New, Nouveau
+    Entrepot, Warehouses, Entrepots
+    Envoi-Title, Shipment analysis, Analyse des envois
+    Trajet-new-Title, Warehouse route new stores, Trajet entrepot nouveau magasins
+    Trajet-Title, Warehouse route stores, Trajet Entrepots magasins
+    Classement-Title, Ranking by turnover and growth (color), Classement par CA et Croissance (couleur)
+    Marque, Brand, Marque
+    Article, Article name, Article
+    Fiche-Title, Article Report, Fiche Produits
+    1selection, 1st select, 1er jeu de selection
+    2selection, 2nd select, 2ème jeu de selection
+    Comparatif-Title, Comparative analysis, Analyse comparative
+];
+///$tab Ventes
+[Ventes]:
+LOAD
+    ArticleEAN,
+    photo,
+    numMagasin,
+    NMois,
+    Marque,
+    product_name,
+    Categorie,
+    Mois,
+    Discount,
+    Marge,
+    Année,
+    CA_HT,
+    COGS,
+    Client_id,
+    SousCategorie,
+    Quantité,
+    Rayon,
+    AnneeMois,
+    Rayon_en,
+    Rayon_fr,
+    Key_Livraison
+FROM [$(v_Folder_Data)/Vente-new-Vente.qvd]
+(qvd);
+///$tab Clients
+[Clients]:
+LOAD
+    Nationalite,
+    "First Name",
+    Gender,
+    Client_id
+FROM [$(v_Folder_Data)/Vente-new-Client.qvd]
+(qvd);
+
+///$tab Magasins
+[Magasins]:
+LOAD
+    numMagasin,
+    Site,
+    ville,
+    Région,
+    coordonnees,
+    "Type",
+    Statut,
+    Ouverture,
+    REGION_SECURE
+FROM [$(v_Folder_Data)/Vente-new-MAG.qvd]
+(qvd);
+
+[Distance Magasins]:
+LOAD
+    Site,
+    mag_ville_Distance,
+    if(mag_ville_Distance<=10, dual(' 0-10 min', 0), 
+    	if(mag_ville_Distance<=20, dual(' 10-20 min', 1), 
+        	if(mag_ville_Distance<=30, dual(' 20-30 min', 2), 
+            	if(mag_ville_Distance>30, dual(' > 30 min', 3), 
+    dual('Not found', 4))))) AS distance_compartiment,
+    distance,
+    code_Commune
+FROM [$(v_Folder_Data)/Vente-new-distance_mag.qvd]
+(qvd);
+///$tab Entrepots
+[Entrepots]:
+LOAD
+    Supply.Rayon,
+    Entrepot,
+    DATE_Livraison,
+    Centrale,
+    GPS_Entrepot,
+    Codepos as code_commune,
+    CP_Usine,
+    Chemin,
+    Usine,
+    CP_Entrepot,
+    Volumetrie,
+    "Annee Construction",
+    Key_Livraison
+FROM [$(v_Folder_Data)/Vente-new-SupplyChain.qvd]
+(qvd);
+
+
+///$tab Concurrents
+[Concurrents]:
+LOAD
+    Magasin_Concurent,
+    if(Magasin_Concurent='PARIS LES HALLES', '[2.347,48.861893]',GPS_Concurent) As GPS_Concurent,
+    Région
+FROM [$(v_Folder_Data)/Vente-new-Concurrence.qvd]
+(qvd);
+
+
+///$tab Régions
+[Régions]:
+LOAD
+    Région,
+    region.Area,
+    numDep
+FROM [$(v_Folder_Data)/Vente-new-REGION.qvd]
+(qvd);
+
+[Détails Communes]:
+LOAD
+    COMMUNE_Area,
+    code_Commune,
+    Commune,
+    population
+FROM [$(v_Folder_Data)/Vente-new-Details_Commune.qvd]
+(qvd);
+
+
+///$tab Routes
+// RouteMagasins:
+// first 100
+// Load 
+// 	rowno()         			AS routeid,
+//     '[0.495112, 44.856584]' 		AS origin,
+// 	coordonnees				AS dest,
+//     numMagasin
+// Resident [Magasins]
+// where len(Trim(coordonnees)>0);
+
+// MagasinsGeo:
+// Load 
+//   routeid,
+//   Distance				As Distance_Magasins,
+//   Duration				As Duration_Magasins,
+//   Status				As Status_Magasins,
+//   LowResLine			As Trajet_Magasins
+// Extension 
+// GeoOperations.ScriptEval('Routes(originField="origin", destField="dest")', RouteMagasins);
+
+[Point GPS]:
+LOAD 
+	GPS_Entrepot				AS dest
+Resident [Entrepots]
+where code_commune='33113';
+
+Left Join
+
+LOAD 
+	Site,
+	coordonnees					AS orig
+Resident [Magasins]
+where Région='Sud Ouest';  
+
+NoConcatenate
+
+RouteEntrepots:
+first 100
+Load 
+	rowno()         			AS routeid,
+    orig				 		AS origin,
+	dest						AS dest
+Resident [Point GPS];
+
+EntrepotsGeo:
+Load * Extension 
+GeoOperations.ScriptEval('Routes(originField="origin", destField="dest")', RouteEntrepots);
+///$tab Calendrier
+// [Date Forecast]:
+// LOAD
+//     AnneeMois,
+//     "Date ForeCast",
+//     AnneeMoisNumber
+// FROM [lib://DataFiles/Vente-new-ForeCast.qvd]
+// (qvd);
+
+// LET vDateMin = Floor(YearStart(AddYears(today(),-2)));  
+// LET vDateMax = Floor(YearEnd(AddYears(today(),0))); 
+
+Temp:  
+Load  
+     min([DATE_Livraison]) as minDate,  
+     max([DATE_Livraison]) as maxDate  
+Resident [Entrepots];  
+
+Let vDateMin = Num(Peek('minDate', 0, 'Temp'));  
+Let vDateMax = Num(Peek('maxDate', 0, 'Temp'));  
+DROP Table Temp;  
+
+TempCalendar:  
+LOAD 
+       Date($(vDateMin) + RowNo() - 1) AS TempDate
+AUTOGENERATE 1
+WHILE $(vDateMin)+IterNo()-1<= $(vDateMax);  
+
+DimPeriod:
+NOCONCATENATE LOAD
+       Year(TempDate)*10000 + Month(TempDate)* 100 + Day(TempDate) as key_Date, // YYYYMMDD
+       Year(TempDate)                                                                                as Period_Year,
+       'Q'&Ceil(Month(TempDate)/3)                                                     as Period_Quarter,
+       'Q'&Ceil(Month(TempDate)/3) &'-'& Year(TempDate)                  as Period_QuarterName,
+       Monthname(TempDate)                                                                    as Period_MonthName,
+       Date(Monthname(TempDate),'MMM YY')                                       as Period_MonthName_Short,   
+       Month(TempDate)                                                                        as Period_Month,
+       Day(TempDate)                                                                                 as Period_DayOfMonth,
+       text(Date(TempDate, 'W'))                                                       as Period_DayOfWeek,
+       if(WeekDay(TempDate)<5,1,0)                                                     as Period_CountWeekDays,     
+       text(Date(TempDate, 'WWW'))                                                     as Period_DayNameOfWeek,
+       'W'&Week(TempDate)                                                                     as Period_Week,
+       Replace(WeekName(TempDate), '/', '-W')                                   as Period_WeekName,
+       TempDate                                                                                      as Period_Date,
+       WeekDay(TempDate)                                                                      as Period_DayName,
+       Date#(Date(TempDate, 'D MMM'), 'D MMM')                                  as Period_DayMonth,
+       Date#(Date(TempDate, 'WWW D MMM'), 'WWW D MMM')                   as Period_DayNameMonth,
+       Date#(Date(TempDate, 'WWW D MMM YYYY'), 'WWW D MMM YYYY') as Period_DayNameMonthYear
+RESIDENT TempCalendar ORDER BY TempDate ASC;
+
+/* Month at Month level */
+CONCATENATE (DimPeriod)LOAD distinct
+       Year(TempDate)*100 + Month(TempDate)                      as key_Date,  // YYYYMM
+       Year(TempDate)                                                                   as Period_Year,
+       'Q'&Ceil(Month(TempDate)/3)                                        as Period_Quarter,
+       'Q'&Ceil(Month(TempDate)/3) &'-'& Year(TempDate)     as Period_QuarterName,
+       Monthname(TempDate)                                                       as Period_MonthName,
+       Date(Monthname(TempDate),'MMM YY')                          as Period_MonthName_Short,
+       Month(TempDate)                                                           as Period_Month
+RESIDENT TempCalendar ORDER BY TempDate ASC;
+
+drop table TempCalendar;
+///$tab Exit
+Exit Script;
+
+
+
+
+///$tab Régions
+[Geographie]:
+LOAD
+    mutation,
+    adresse,
+    "Code Postal",
+    code_commune				AS code_commune,
+    nom_commune,
+    code_departement,
+    point_gps,
+    nom_region
+FROM [lib://DataFiles/Mutations.qvd]
+(qvd);
+
+
+///$tab Commune
+[Communes]:
+LOAD
+     Commune_CodeInsee as code_commune,
+     Commune as commune,
+     Commune_Area_30% as [Commune_Area]
+FROM [lib://DataFiles/Commune.qvd] (qvd);
